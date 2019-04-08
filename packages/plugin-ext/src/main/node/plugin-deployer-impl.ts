@@ -84,6 +84,13 @@ export class PluginDeployerImpl implements PluginDeployer {
 
     protected async doStart(): Promise<void> {
 
+        function sleep(ms: number) {
+            return new Promise(resolve => {
+                setTimeout(resolve, ms);
+            });
+        }
+
+        await sleep(10000);
         // init resolvers
         await this.initResolvers();
 
