@@ -98,6 +98,7 @@ export class ApplicationPackage {
     protected _frontendElectronModules: Map<string, string> | undefined;
     protected _backendModules: Map<string, string> | undefined;
     protected _backendElectronModules: Map<string, string> | undefined;
+    protected _electronMainModules: Map<string, string> | undefined;
     protected _extensionPackages: ReadonlyArray<ExtensionPackage> | undefined;
 
     /**
@@ -157,6 +158,13 @@ export class ApplicationPackage {
             this._backendElectronModules = this.computeModules('backendElectron', 'backend');
         }
         return this._backendElectronModules;
+    }
+
+    get electronMainModules(): Map<string, string> {
+        if (!this._electronMainModules) {
+            this._electronMainModules = this.computeModules('electronMain');
+        }
+        return this._electronMainModules;
     }
 
     protected computeModules<P extends keyof Extension, S extends keyof Extension = P>(primary: P, secondary?: S): Map<string, string> {

@@ -5,6 +5,7 @@
 - [core] added support for several international keyboard layouts
 - [core] implemented auto-detection of keyboard layout based on pressed keys
 - [core] added command to manually choose a keyboard layout
+- [electron] use inversify to allow for contributions to the electron main process
 
 Breaking changes:
 
