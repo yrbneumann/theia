@@ -18,7 +18,7 @@ import * as electron from 'electron';
 import { inject, injectable } from 'inversify';
 import {
     CommandRegistry, isOSX, ActionMenuNode, CompositeMenuNode,
-    MAIN_MENU_BAR, MenuModelRegistry, MenuPath
+    MAIN_MENU_BAR, MenuModelRegistry, MenuPath, ILogger
 } from '../../common';
 import { PreferenceService, KeybindingRegistry, Keybinding } from '../../browser';
 import { ContextKeyService } from '../../browser/context-key-service';
@@ -29,6 +29,9 @@ export class ElectronMainMenuFactory {
 
     protected _menu: Electron.Menu;
     protected _toggledCommands: Set<string> = new Set();
+
+    @inject(ILogger)
+    protected readonly logger: ILogger;
 
     @inject(ContextKeyService)
     protected readonly contextKeyService: ContextKeyService;
@@ -57,7 +60,13 @@ export class ElectronMainMenuFactory {
 
     createMenuBar(): Electron.Menu {
         const menuModel = this.menuProvider.getMenu(MAIN_MENU_BAR);
+        const start = Date.now();
         const template = this.fillMenuTemplate([], menuModel);
+        this.logger.isDebug().then(debug => {
+            if (debug) {
+                this.logger.debug(`Recalculated the menu templates in ${Date.now() - start} ms.`);
+            }
+        });
         if (isOSX) {
             template.unshift(this.createOSXMenu());
         }
@@ -122,10 +131,14 @@ export class ElectronMainMenuFactory {
                     throw new Error(`Unknown command with ID: ${commandId}.`);
                 }
 
-                const args = anchor ? [anchor] : [];
-                if (!this.commandRegistry.isVisible(commandId, ...args)
-                    || (!!menu.action.when && !this.contextKeyService.match(menu.action.when))) {
-                    continue;
+                // Do not render empty groups for the context menu only.
+                // But we show all disabled items in the main application menu.
+                if (anchor) {
+                    const args = anchor ? [anchor] : [];
+                    if (!this.commandRegistry.isVisible(commandId, ...args)
+                        || (!!menu.action.when && !this.contextKeyService.match(menu.action.when))) {
+                        continue;
+                    }
                 }
 
                 const bindings = this.keybindingRegistry.getKeybindingsForCommand(commandId);
@@ -143,8 +156,8 @@ export class ElectronMainMenuFactory {
                     label: menu.label,
                     type: this.commandRegistry.getToggledHandler(commandId) ? 'checkbox' : 'normal',
                     checked: this.commandRegistry.isToggled(commandId),
-                    enabled: true, // https://github.com/theia-ide/theia/issues/446
-                    visible: true,
+                    enabled: this.commandRegistry.isEnabled(commandId),
+                    visible: anchor ? this.commandRegistry.isVisible(commandId) : true, // We filter items for the context menu only.
                     click: () => this.execute(commandId, anchor),
                     accelerator
                 });

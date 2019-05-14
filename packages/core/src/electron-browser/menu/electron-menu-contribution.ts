@@ -18,12 +18,13 @@ import * as electron from 'electron';
 import { inject, injectable } from 'inversify';
 import {
     Command, CommandContribution, CommandRegistry,
-    isOSX, MenuModelRegistry, MenuContribution, Disposable
+    isOSX, MenuModelRegistry, MenuContribution, Disposable, DisposableCollection
 } from '../../common';
 import { KeybindingContribution, KeybindingRegistry } from '../../browser';
 import { FrontendApplication, FrontendApplicationContribution, CommonMenus } from '../../browser';
 import { ElectronMainMenuFactory } from './electron-main-menu-factory';
 import { FrontendApplicationStateService, FrontendApplicationState } from '../../browser/frontend-application-state';
+import { SelectionService } from '../../common/selection-service';
 
 export namespace ElectronCommands {
     export const TOGGLE_DEVELOPER_TOOLS: Command = {
@@ -71,6 +72,9 @@ export class ElectronMenuContribution implements FrontendApplicationContribution
     @inject(FrontendApplicationStateService)
     protected readonly stateService: FrontendApplicationStateService;
 
+    @inject(SelectionService)
+    protected readonly selectionService: SelectionService;
+
     constructor(
         @inject(ElectronMainMenuFactory) protected readonly factory: ElectronMainMenuFactory
     ) { }
@@ -96,20 +100,33 @@ export class ElectronMenuContribution implements FrontendApplicationContribution
             // between them as the user switches windows.
             electron.remote.getCurrentWindow().on('focus', () => this.setMenu());
         }
+
+        // Poor man's way to update the Electron menu items dynamically.
+        // https://github.com/theia-ide/theia/issues/446
+        // https://github.com/microsoft/vscode/blob/a6774a6961a802453d7ae985d4f555b8f3e0bb88/src/vs/platform/menubar/electron-main/menubar.ts#L200-L202
+        const toDisposeOnClosingWindow = new DisposableCollection();
+
+        // Listen on current widget changes.
+        const currentChangedListener = () => this.setMenu();
+        app.shell.currentChanged.connect(currentChangedListener);
+        toDisposeOnClosingWindow.push(Disposable.create(() => app.shell.currentChanged.disconnect(currentChangedListener)));
+
+        // Listen on the selection service. To be able to update the items on the `Navigator` selections, for instance.
+        toDisposeOnClosingWindow.push(this.selectionService.onSelectionChanged(() => this.setMenu()));
+
         // Make sure the application menu is complete, once the frontend application is ready.
         // https://github.com/theia-ide/theia/issues/5100
-        let onStateChange: Disposable | undefined = undefined;
         const stateServiceListener = (state: FrontendApplicationState) => {
             if (state === 'ready') {
                 this.setMenu();
             }
             if (state === 'closing_window') {
-                if (!!onStateChange) {
-                    onStateChange.dispose();
+                if (!toDisposeOnClosingWindow.disposed) {
+                    toDisposeOnClosingWindow.dispose();
                 }
             }
         };
-        onStateChange = this.stateService.onStateChanged(stateServiceListener);
+        toDisposeOnClosingWindow.push(this.stateService.onStateChanged(stateServiceListener));
     }
 
     private setMenu(menu: electron.Menu = this.factory.createMenuBar(), window: electron.BrowserWindow = electron.remote.getCurrentWindow()): void {
