@@ -22,7 +22,7 @@ import { DebugBreakpointsWidget } from './debug-breakpoints-widget';
 import { DebugVariablesWidget } from './debug-variables-widget';
 import { DebugToolBar } from './debug-toolbar-widget';
 import { DebugViewModel, DebugViewOptions } from './debug-view-model';
-import { ViewContainerFactory } from '@theia/core/lib/browser/view-container';
+import { ViewContainer } from '@theia/core/lib/browser/view-container';
 
 export const DebugSessionWidgetFactory = Symbol('DebugSessionWidgetFactory');
 export type DebugSessionWidgetFactory = (options: DebugViewOptions) => DebugSessionWidget;
@@ -49,8 +49,8 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
 
     protected readonly container = new SplitPanel();
 
-    @inject(ViewContainerFactory)
-    protected readonly viewContainerFactory: ViewContainerFactory;
+    @inject(ViewContainer.Factory)
+    protected readonly viewContainerFactory: ViewContainer.Factory;
 
     @inject(DebugViewModel)
     readonly model: DebugViewModel;

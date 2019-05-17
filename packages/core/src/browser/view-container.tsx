@@ -17,21 +17,16 @@
 import * as React from 'react';
 // import arrayMove from 'array-move';
 // import { SortableContainer, SortableElement } from 'react-sortable-hoc';
+// TODO add typings!!!!
 const Sortable = require('react-sortablejs');
 import { ReactWidget, Widget, EXPANSION_TOGGLE_CLASS, COLLAPSED_CLASS, MessageLoop, Message } from './widgets';
 import { Disposable } from '../common/disposable';
 import { ContextMenuRenderer } from './context-menu-renderer';
 import { MaybeArray } from '../common/types';
+import { ApplicationShell } from './shell/application-shell';
+import { Keybinding } from './keybinding';
 
-export const ViewContainerFactory = Symbol('ViewContainerFactory');
-export interface ViewContainerFactory {
-    (...widgets: Widget[]): ViewContainer;
-}
-export interface WidgetDescriptor {
-    // TODO: https://github.com/microsoft/vscode/blob/40ae7f0312e051b8fcfac5653a588d4efdd3b396/src/vs/workbench/common/views.ts#L119-L143
-}
-
-export class ViewContainer extends ReactWidget {
+export class ViewContainer extends ReactWidget implements ApplicationShell.TrackableWidgetProvider {
 
     protected readonly widgets: Widget[] = [];
 
@@ -84,6 +79,10 @@ export class ViewContainer extends ReactWidget {
         }
     }
 
+    async getTrackableWidgets(): Promise<Widget[]> {
+        return this.widgets.slice();
+    }
+
 }
 
 export namespace ViewContainer {
@@ -96,6 +95,37 @@ export namespace ViewContainer {
     }
     export namespace Styles {
         export const VIEW_CONTAINER_CLASS = 'theia-view-container';
+    }
+    export const Factory = Symbol('ViewContainerFactory');
+    export interface Factory {
+        (...widgets: Widget[]): ViewContainer;
+    }
+    export namespace Factory {
+        export interface WidgetDescriptor {
+
+            // tslint:disable-next-line:no-any
+            readonly widget: Widget | { ctor: typeof Widget, args?: any[] } | { ctor: { new(...args: any[]): any; } }
+
+            /**
+             * https://code.visualstudio.com/docs/getstarted/keybindings#_when-clause-contexts
+             */
+            readonly when?: string;
+
+            readonly order?: number;
+
+            readonly weight?: number;
+
+            readonly collapsed?: boolean;
+
+            readonly canToggleVisibility?: boolean;
+
+            // Applies only to newly created views
+            readonly hideByDefault?: boolean;
+
+            readonly workspace?: boolean;
+
+            readonly focusCommand?: { id: string, keybindings?: string };
+        }
     }
 }
 
@@ -110,7 +140,7 @@ export class ViewContainerComponent extends React.Component<ViewContainerCompone
     }
 
     public render() {
-        const items = this.state.widgets.map(w => <ViewContainerPart widget={w}></ViewContainerPart>);
+        const items = this.state.widgets.map(w => <ViewContainerPart key={w.id} widget={w}></ViewContainerPart>);
         return <Sortable>
             {items}
         </Sortable>;
