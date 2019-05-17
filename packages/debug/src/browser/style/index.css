@@ -350,10 +350,6 @@
     flex: 1;
 }
 
-.theia-debug-widget-container .theia-header {
-    margin-top: 5px;
-}
-
 /** Breakpoint Widget */
 .theia-debug-breakpoint-widget {
     display: flex;

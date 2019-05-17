@@ -73,6 +73,8 @@ import { ContextKeyService } from './context-key-service';
 import { ResourceContextKey } from './resource-context-key';
 import { KeyboardLayoutService } from './keyboard/keyboard-layout-service';
 import { MimeService } from './mime-service';
+import { ViewContainer, ViewContainerFactory } from './view-container';
+import { Widget } from './widgets';
 
 export const frontendApplicationModule = new ContainerModule((bind, unbind, isBound, rebind) => {
     const themeService = ThemeService.get();
@@ -236,6 +238,12 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     bindCorePreferences(bind);
 
     bind(MimeService).toSelf().inSingletonScope();
+
+    bind(ViewContainerFactory).toFactory(context => (...widgets: Widget[]) =>
+        new ViewContainer({
+            contextMenuRenderer: context.container.get(ContextMenuRenderer)
+        }, ...widgets)
+    );
 });
 
 export function bindMessageService(bind: interfaces.Bind): interfaces.BindingWhenOnSyntax<MessageService> {

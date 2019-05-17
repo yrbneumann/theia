@@ -22,7 +22,7 @@ import { DebugBreakpointsWidget } from './debug-breakpoints-widget';
 import { DebugVariablesWidget } from './debug-variables-widget';
 import { DebugToolBar } from './debug-toolbar-widget';
 import { DebugViewModel, DebugViewOptions } from './debug-view-model';
-import { ViewContainer } from '@theia/core/lib/browser/view-container';
+import { ViewContainerFactory } from '@theia/core/lib/browser/view-container';
 
 export const DebugSessionWidgetFactory = Symbol('DebugSessionWidgetFactory');
 export type DebugSessionWidgetFactory = (options: DebugViewOptions) => DebugSessionWidget;
@@ -48,6 +48,9 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
     }
 
     protected readonly container = new SplitPanel();
+
+    @inject(ViewContainerFactory)
+    protected readonly viewContainerFactory: ViewContainerFactory;
 
     @inject(DebugViewModel)
     readonly model: DebugViewModel;
@@ -84,10 +87,12 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
         ]);
 
         this.container.addClass('theia-debug-widget-container');
-        this.container.addWidget(this.createViewContainer(this.threads));
-        this.container.addWidget(this.createViewContainer(this.frames));
-        this.container.addWidget(this.createViewContainer(this.variables));
-        this.container.addWidget(this.createViewContainer(this.breakpoints));
+        this.container.addWidget(this.viewContainerFactory(...[
+            this.threads,
+            this.frames,
+            this.variables,
+            this.breakpoints
+        ]));
 
         const layout = this.layout = new PanelLayout();
         layout.addWidget(this.toolbar);
@@ -100,7 +105,7 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
     }
 
     protected createViewContainer(widget: Widget): Widget {
-        const viewContainer = new ViewContainer();
+        const viewContainer = this.viewContainerFactory(widget);
         viewContainer.addWidget(widget);
         return viewContainer;
     }
