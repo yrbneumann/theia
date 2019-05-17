@@ -72,7 +72,7 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
             DebugThreadsWidget,
             DebugStackFramesWidget,
             DebugVariablesWidget,
-            DebugBreakpointsWidget].map(identifier => ({ widget: identifier }))
+            DebugBreakpointsWidget].map(identifier => ({ widget: identifier, options: { weight: 10 } }))
         );
         this.container.addWidget(this.viewContainer);
 

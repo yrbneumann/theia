@@ -239,21 +239,21 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
 
     bind(MimeService).toSelf().inSingletonScope();
 
-    bind(ViewContainer.Factory).toFactory(context => (...props: ViewContainer.Factory.WidgetDescriptor[]) => {
+    bind(ViewContainer.Factory).toFactory(context => (...descriptors: ViewContainer.Factory.WidgetDescriptor[]) => {
         const { container } = context;
         const services: ViewContainer.Services = {
             contextMenuRenderer: container.get(ContextMenuRenderer)
         };
-        const widgets: Widget[] = [];
-        for (const prop of props) {
-            const { widget } = prop;
+        const props: ViewContainer.Prop[] = [];
+        for (const descriptor of descriptors) {
+            const { widget, options } = descriptor;
             if (widget instanceof Widget) {
-                widgets.push(widget);
+                props.push({ widget, options });
             } else {
-                widgets.push(container.get(widget));
+                props.push({ widget: container.get(widget), options });
             }
         }
-        return new ViewContainer(services, ...widgets.map(widget => ({ widget })));
+        return new ViewContainer(services, ...props);
     });
 });
 

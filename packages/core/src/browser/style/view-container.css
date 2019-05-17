@@ -19,18 +19,15 @@
     display: flex;
     flex-direction: column;
 }
-.theia-view-container > ul {
-    display: block;
-    list-style-type: disc;
-    margin-block-start: 1em;
-    margin-block-end: 1em;
-    margin-inline-start: 0px;
-    margin-inline-end: 0px;
-    padding-inline-start: 0px;
+.theia-view-container .sortable {
+    display: flex;
+    flex-direction: column;
 }
 
 .theia-view-container-part {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 .theia-view-container-part .head {

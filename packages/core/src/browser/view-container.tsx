@@ -33,8 +33,9 @@ export class ViewContainer extends ReactWidget implements ApplicationShell.Track
     constructor(protected readonly services: ViewContainer.Services, ...props: ViewContainer.Prop[]) {
         super();
         this.addClass(ViewContainer.Styles.VIEW_CONTAINER_CLASS);
-        for (const prop of props) {
-            this.toDispose.push(this.addWidget(prop));
+        for (const descriptor of props) {
+            // console.log('options', descriptor.options);
+            this.toDispose.push(this.addWidget(descriptor));
         }
     }
 
@@ -123,10 +124,12 @@ export namespace ViewContainer {
 
             readonly focusCommand?: { id: string, keybindings?: string };
         }
-        export interface WidgetDescriptor extends WidgetOptions {
+        export interface WidgetDescriptor {
 
             // tslint:disable-next-line:no-any
             readonly widget: Widget | interfaces.ServiceIdentifier<Widget>;
+
+            readonly options?: WidgetOptions;
         }
     }
 }
@@ -143,17 +146,21 @@ export class ViewContainerComponent extends React.Component<ViewContainerCompone
 
     public render() {
         const items = this.state.widgets.map(w => <ViewContainerPart key={w.id} widget={w}></ViewContainerPart>);
-        return <Sortable>
+        return <Sortable
+            className={'sortable'}
+        // onChange={this.onChange}
+        >
             {items}
         </Sortable>;
         // return <SortableViewContainer widgets={this.state.widgets} onSortEnd={this.onSortEnd} />;
     }
 
-    // private onSortEnd = ({ oldIndex, newIndex }: { oldIndex: number, newIndex: number }) => {
-    //     this.setState({
-    //         widgets: arrayMove(this.state.widgets, oldIndex, newIndex),
-    //     });
-    // }
+    protected onChange = ({ widgets }: { widgets: Widget[] }) => {
+        console.log('widgets', widgets);
+        this.setState({
+            widgets
+        });
+    }
 
 }
 export namespace ViewContainerComponent {
