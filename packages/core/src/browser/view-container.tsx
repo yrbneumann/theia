@@ -15,8 +15,9 @@
  ********************************************************************************/
 
 import * as React from 'react';
-import arrayMove from 'array-move';
-import { SortableContainer, SortableElement } from 'react-sortable-hoc';
+// import arrayMove from 'array-move';
+// import { SortableContainer, SortableElement } from 'react-sortable-hoc';
+const Sortable = require('react-sortablejs');
 import { ReactWidget, Widget, EXPANSION_TOGGLE_CLASS, COLLAPSED_CLASS, MessageLoop, Message } from './widgets';
 import { Disposable } from '../common/disposable';
 import { ContextMenuRenderer } from './context-menu-renderer';
@@ -109,14 +110,18 @@ export class ViewContainerComponent extends React.Component<ViewContainerCompone
     }
 
     public render() {
-        return <SortableViewContainer widgets={this.state.widgets} onSortEnd={this.onSortEnd} />;
+        const items = this.state.widgets.map(w => <ViewContainerPart widget={w}></ViewContainerPart>);
+        return <Sortable>
+            {items}
+        </Sortable>;
+        // return <SortableViewContainer widgets={this.state.widgets} onSortEnd={this.onSortEnd} />;
     }
 
-    private onSortEnd = ({ oldIndex, newIndex }: { oldIndex: number, newIndex: number }) => {
-        this.setState({
-            widgets: arrayMove(this.state.widgets, oldIndex, newIndex),
-        });
-    }
+    // private onSortEnd = ({ oldIndex, newIndex }: { oldIndex: number, newIndex: number }) => {
+    //     this.setState({
+    //         widgets: arrayMove(this.state.widgets, oldIndex, newIndex),
+    //     });
+    // }
 
 }
 export namespace ViewContainerComponent {
@@ -129,14 +134,14 @@ export namespace ViewContainerComponent {
     }
 }
 
-const SortableViewContainer = SortableContainer(({ widgets }: { widgets: Widget[] }) =>
-    (
-        <div>
-            {widgets.map((widget, index) => (
-                <SortableViewContainerPart key={widget.id} index={index} widget={widget} />
-            ))}
-        </div>
-    ));
+// const SortableViewContainer = SortableContainer(({ widgets }: { widgets: Widget[] }) =>
+//     (
+//         <div>
+//             {widgets.map((widget, index) => (
+//                 <SortableViewContainerPart key={widget.id} index={index} widget={widget} />
+//             ))}
+//         </div>
+//     ));
 
 export class ViewContainerPart extends React.Component<ViewContainerPart.Props, ViewContainerPart.State> {
 
@@ -256,7 +261,7 @@ export namespace ViewContainerPart {
     }
 }
 
-const SortableViewContainerPart = SortableElement(ViewContainerPart);
+// const SortableViewContainerPart = SortableElement(ViewContainerPart);
 
 export interface ViewContainerPartToolbarElement {
     /** default true */
