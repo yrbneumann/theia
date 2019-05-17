@@ -24,71 +24,70 @@ import { Disposable } from '../common/disposable';
 import { ContextMenuRenderer } from './context-menu-renderer';
 import { MaybeArray } from '../common/types';
 import { ApplicationShell } from './shell/application-shell';
-import { Keybinding } from './keybinding';
 
 export class ViewContainer extends ReactWidget implements ApplicationShell.TrackableWidgetProvider {
 
-    protected readonly widgets: Widget[] = [];
+    protected readonly props: ViewContainer.Prop[] = [];
 
-    constructor(protected readonly services: ViewContainer.Services, ...widgets: Widget[]) {
+    constructor(protected readonly services: ViewContainer.Services, ...props: ViewContainer.Prop[]) {
         super();
         this.addClass(ViewContainer.Styles.VIEW_CONTAINER_CLASS);
-        for (const widget of widgets) {
-            this.toDispose.push(this.addWidget(widget));
+        for (const prop of props) {
+            this.toDispose.push(this.addWidget(prop));
         }
     }
 
     public render() {
-        return <ViewContainerComponent widgets={this.widgets} services={this.services} />;
+        return <ViewContainerComponent widgets={this.props.map(p => p.widget)} services={this.services} />;
     }
 
-    addWidget(widget: Widget): Disposable {
-        if (this.widgets.indexOf(widget) !== -1) {
+    addWidget(prop: ViewContainer.Prop): Disposable {
+        if (this.props.indexOf(prop) !== -1) {
             return Disposable.NULL;
         }
-        this.widgets.push(widget);
+        this.props.push(prop);
         this.update();
-        return Disposable.create(() => this.removeWidget(widget));
+        return Disposable.create(() => this.removeWidget(prop.widget));
     }
 
     removeWidget(widget: Widget): boolean {
-        const index = this.widgets.indexOf(widget);
+        const index = this.props.map(p => p.widget).indexOf(widget);
         if (index === -1) {
             return false;
         }
-        this.widgets.splice(index, 1);
+        this.props.splice(index, 1);
         this.update();
         return true;
     }
 
     protected onResize(msg: Widget.ResizeMessage): void {
         super.onResize(msg);
-        this.widgets.forEach(widget => MessageLoop.sendMessage(widget, Widget.ResizeMessage.UnknownSize));
+        this.props.forEach(prop => MessageLoop.sendMessage(prop.widget, Widget.ResizeMessage.UnknownSize));
     }
 
     protected onUpdateRequest(msg: Message): void {
-        this.widgets.forEach(widget => widget.update());
+        this.props.forEach(prop => prop.widget.update());
         super.onUpdateRequest(msg);
     }
 
     onActivateRequest(msg: Message): void {
         super.onActivateRequest(msg);
-        const widget = this.widgets.values().next().value;
-        if (widget) {
-            widget.activate();
+        const prop = this.props.values().next().value;
+        if (prop) {
+            prop.widget.activate();
         }
     }
 
     async getTrackableWidgets(): Promise<Widget[]> {
-        return this.widgets.slice();
+        return this.props.map(p => p.widget);
     }
 
 }
 
 export namespace ViewContainer {
-    export interface Props {
-        readonly services: Services;
-        readonly widgets?: MaybeArray<Widget>;
+    export interface Prop {
+        readonly widget: Widget;
+        readonly options?: ViewContainer.Factory.WidgetOptions;
     }
     export interface Services {
         readonly contextMenuRenderer: ContextMenuRenderer;
@@ -101,10 +100,7 @@ export namespace ViewContainer {
         (...widgets: Widget[]): ViewContainer;
     }
     export namespace Factory {
-        export interface WidgetDescriptor {
-
-            // tslint:disable-next-line:no-any
-            readonly widget: Widget | { ctor: typeof Widget, args?: any[] } | { ctor: { new(...args: any[]): any; } }
+        export interface WidgetOptions {
 
             /**
              * https://code.visualstudio.com/docs/getstarted/keybindings#_when-clause-contexts
@@ -125,6 +121,11 @@ export namespace ViewContainer {
             readonly workspace?: boolean;
 
             readonly focusCommand?: { id: string, keybindings?: string };
+        }
+        export interface WidgetDescriptor extends WidgetOptions {
+
+            // tslint:disable-next-line:no-any
+            readonly widget: Widget | { ctor: typeof Widget, args?: any[] } | { ctor: { new(...args: any[]): any; } }
         }
     }
 }

@@ -242,7 +242,7 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     bind(ViewContainer.Factory).toFactory(context => (...widgets: Widget[]) =>
         new ViewContainer({
             contextMenuRenderer: context.container.get(ContextMenuRenderer)
-        }, ...widgets)
+        }, ...widgets.map(widget => ({ widget })))
     );
 });
 
