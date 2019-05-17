@@ -14,6 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+import { interfaces } from 'inversify';
 import * as React from 'react';
 // import arrayMove from 'array-move';
 // import { SortableContainer, SortableElement } from 'react-sortable-hoc';
@@ -22,8 +23,8 @@ const Sortable = require('react-sortablejs');
 import { ReactWidget, Widget, EXPANSION_TOGGLE_CLASS, COLLAPSED_CLASS, MessageLoop, Message } from './widgets';
 import { Disposable } from '../common/disposable';
 import { ContextMenuRenderer } from './context-menu-renderer';
-import { MaybeArray } from '../common/types';
 import { ApplicationShell } from './shell/application-shell';
+import { MaybePromise } from '../common/types';
 
 export class ViewContainer extends ReactWidget implements ApplicationShell.TrackableWidgetProvider {
 
@@ -78,7 +79,7 @@ export class ViewContainer extends ReactWidget implements ApplicationShell.Track
         }
     }
 
-    async getTrackableWidgets(): Promise<Widget[]> {
+    getTrackableWidgets(): MaybePromise<Widget[]> {
         return this.props.map(p => p.widget);
     }
 
@@ -97,7 +98,7 @@ export namespace ViewContainer {
     }
     export const Factory = Symbol('ViewContainerFactory');
     export interface Factory {
-        (...widgets: Widget[]): ViewContainer;
+        (...widgets: Factory.WidgetDescriptor[]): ViewContainer;
     }
     export namespace Factory {
         export interface WidgetOptions {
@@ -125,7 +126,7 @@ export namespace ViewContainer {
         export interface WidgetDescriptor extends WidgetOptions {
 
             // tslint:disable-next-line:no-any
-            readonly widget: Widget | { ctor: typeof Widget, args?: any[] } | { ctor: { new(...args: any[]): any; } }
+            readonly widget: Widget | interfaces.ServiceIdentifier<Widget>;
         }
     }
 }

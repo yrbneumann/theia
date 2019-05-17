@@ -239,11 +239,22 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
 
     bind(MimeService).toSelf().inSingletonScope();
 
-    bind(ViewContainer.Factory).toFactory(context => (...widgets: Widget[]) =>
-        new ViewContainer({
-            contextMenuRenderer: context.container.get(ContextMenuRenderer)
-        }, ...widgets.map(widget => ({ widget })))
-    );
+    bind(ViewContainer.Factory).toFactory(context => (...props: ViewContainer.Factory.WidgetDescriptor[]) => {
+        const { container } = context;
+        const services: ViewContainer.Services = {
+            contextMenuRenderer: container.get(ContextMenuRenderer)
+        };
+        const widgets: Widget[] = [];
+        for (const prop of props) {
+            const { widget } = prop;
+            if (widget instanceof Widget) {
+                widgets.push(widget);
+            } else {
+                widgets.push(container.get(widget));
+            }
+        }
+        return new ViewContainer(services, ...widgets.map(widget => ({ widget })));
+    });
 });
 
 export function bindMessageService(bind: interfaces.Bind): interfaces.BindingWhenOnSyntax<MessageService> {

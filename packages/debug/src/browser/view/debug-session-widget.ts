@@ -48,6 +48,7 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
     }
 
     protected readonly container = new SplitPanel();
+    protected viewContainer: ViewContainer;
 
     @inject(ViewContainer.Factory)
     protected readonly viewContainerFactory: ViewContainer.Factory;
@@ -58,18 +59,6 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
     @inject(DebugToolBar)
     protected readonly toolbar: DebugToolBar;
 
-    @inject(DebugThreadsWidget)
-    protected readonly threads: DebugThreadsWidget;
-
-    @inject(DebugStackFramesWidget)
-    protected readonly frames: DebugStackFramesWidget;
-
-    @inject(DebugVariablesWidget)
-    protected readonly variables: DebugVariablesWidget;
-
-    @inject(DebugBreakpointsWidget)
-    protected readonly breakpoints: DebugBreakpointsWidget;
-
     @postConstruct()
     protected init(): void {
         this.id = 'debug:session:' + this.model.id;
@@ -77,22 +66,21 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
         this.title.closable = true;
         this.title.iconClass = 'fa debug-tab-icon';
         this.addClass('theia-session-container');
-        this.toDispose.pushAll([
-            this.toolbar,
-            this.threads,
-            this.frames,
-            this.variables,
-            this.breakpoints,
-            this.container
-        ]);
 
         this.container.addClass('theia-debug-widget-container');
-        this.container.addWidget(this.viewContainerFactory(...[
-            this.threads,
-            this.frames,
-            this.variables,
-            this.breakpoints
-        ]));
+        this.viewContainer = this.viewContainerFactory(...[
+            DebugThreadsWidget,
+            DebugStackFramesWidget,
+            DebugVariablesWidget,
+            DebugBreakpointsWidget].map(identifier => ({ widget: identifier }))
+        );
+        this.container.addWidget(this.viewContainer);
+
+        this.toDispose.pushAll([
+            this.toolbar,
+            this.container,
+            this.viewContainer
+        ]);
 
         const layout = this.layout = new PanelLayout();
         layout.addWidget(this.toolbar);
@@ -105,18 +93,13 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
     }
 
     protected createViewContainer(widget: Widget): Widget {
-        const viewContainer = this.viewContainerFactory(widget);
+        const viewContainer = this.viewContainerFactory({ widget });
         viewContainer.addWidget({ widget });
         return viewContainer;
     }
 
-    getTrackableWidgets(): Widget[] {
-        return [
-            this.threads,
-            this.frames,
-            this.variables,
-            this.breakpoints
-        ];
+    async getTrackableWidgets(): Promise<Widget[]> {
+        return this.viewContainer.getTrackableWidgets();
     }
 
     onAfterAttach(msg: Message): void {
