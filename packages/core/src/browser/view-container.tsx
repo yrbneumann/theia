@@ -16,15 +16,14 @@
 
 import { interfaces } from 'inversify';
 import * as React from 'react';
-// import arrayMove from 'array-move';
-// import { SortableContainer, SortableElement } from 'react-sortable-hoc';
-// TODO add typings!!!!
-const Sortable = require('react-sortablejs');
+import { SortablePane, Pane } from 'react-sortable-pane';
 import { ReactWidget, Widget, EXPANSION_TOGGLE_CLASS, COLLAPSED_CLASS, MessageLoop, Message } from './widgets';
 import { Disposable } from '../common/disposable';
 import { ContextMenuRenderer } from './context-menu-renderer';
 import { ApplicationShell } from './shell/application-shell';
 import { MaybePromise } from '../common/types';
+
+const backgroundColor = () => '#' + (0x1000000 + (Math.random()) * 0xffffff).toString(16).substr(1, 6);
 
 export class ViewContainer extends ReactWidget implements ApplicationShell.TrackableWidgetProvider {
 
@@ -140,26 +139,43 @@ export class ViewContainerComponent extends React.Component<ViewContainerCompone
         super(props);
         const { widgets } = props;
         this.state = {
-            widgets
+            widgets: widgets.map(widget => ({ widget, visible: true, expanded: true }))
         };
     }
 
-    public render() {
-        const items = this.state.widgets.map(w => <ViewContainerPart key={w.id} widget={w}></ViewContainerPart>);
-        return <Sortable
-            className={'sortable'}
-        // onChange={this.onChange}
-        >
-            {items}
-        </Sortable>;
-        // return <SortableViewContainer widgets={this.state.widgets} onSortEnd={this.onSortEnd} />;
-    }
-
-    protected onChange = ({ widgets }: { widgets: Widget[] }) => {
-        console.log('widgets', widgets);
+    protected onExpandedChange = (widget: Widget, expanded: boolean) => {
+        const { widgets } = this.state;
+        const index = widgets.findIndex(w => widget === w.widget);
+        if (index !== -1) {
+            widgets[index].expanded = expanded;
+        }
         this.setState({
             widgets
         });
+    }
+    public render() {
+        const panes = this.state.widgets.filter(widget => widget.visible).map(widget => (
+            <Pane
+                key={widget.widget.id}
+                defaultSize={{ width: '100%' }}
+                style={{ backgroundColor: backgroundColor() }}
+                resizable={{ x: false, y: true }}
+            >
+                <ViewContainerPart key={widget.widget.id} widget={widget.widget} onExpandedChange={this.onExpandedChange} />
+            </Pane>
+        ));
+        return (
+            <div>
+                <SortablePane
+                    direction='vertical'
+                    margin={0}
+                    defaultOrder={this.state.widgets.map(({ widget }) => widget.id)}
+                    disableEffect={true}
+                >
+                    {panes}
+                </SortablePane>
+            </div>
+        );
     }
 
 }
@@ -168,19 +184,15 @@ export namespace ViewContainerComponent {
         widgets: Widget[];
         services: ViewContainer.Services;
     }
+
     export interface State {
-        widgets: Widget[];
+        widgets: Array<{
+            widget: Widget
+            expanded: boolean
+            visible: boolean
+        }>;
     }
 }
-
-// const SortableViewContainer = SortableContainer(({ widgets }: { widgets: Widget[] }) =>
-//     (
-//         <div>
-//             {widgets.map((widget, index) => (
-//                 <SortableViewContainerPart key={widget.id} index={index} widget={widget} />
-//             ))}
-//         </div>
-//     ));
 
 export class ViewContainerPart extends React.Component<ViewContainerPart.Props, ViewContainerPart.State> {
 
@@ -207,7 +219,6 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
             toggleClassNames.push(COLLAPSED_CLASS);
         }
         const toggleClassName = toggleClassNames.join(' ');
-        const backgroundColor = '#' + (0x1000000 + (Math.random()) * 0xffffff).toString(16).substr(1, 6);
         return <div className={ViewContainerPart.Styles.VIEW_CONTAINER_PART_CLASS}>
             <div className={`theia-header ${ViewContainerPart.Styles.HEAD}`}
                 title={widget.title.caption}
@@ -217,7 +228,7 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
                 <span className={`${ViewContainerPart.Styles.LABEL} noselect`}>{widget.title.label}</span>
                 {this.state.expanded && this.renderToolbar()}
             </div>
-            {this.state.expanded && <div className={ViewContainerPart.Styles.BODY} ref={this.setRef} style={{ backgroundColor }} />}
+            {this.state.expanded && <div className={ViewContainerPart.Styles.BODY} ref={this.setRef} style={{ backgroundColor: backgroundColor() }} />}
         </div>;
     }
 
@@ -266,6 +277,7 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
         this.setState({
             expanded: !this.state.expanded
         });
+        this.props.onExpandedChange(this.props.widget, this.state.expanded);
     }
 
     protected ref: HTMLElement | undefined;
@@ -287,6 +299,7 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
 export namespace ViewContainerPart {
     export interface Props {
         readonly widget: Widget
+        onExpandedChange(widget: Widget, expanded: boolean): void;
     }
     export interface State {
         expanded: boolean
@@ -294,9 +307,9 @@ export namespace ViewContainerPart {
     export namespace Styles {
         export const VIEW_CONTAINER_PART_CLASS = 'theia-view-container-part';
         export const HEAD = 'head';
-        export const BODY = 'body';
         export const LABEL = 'label';
         export const ELEMENT = 'element';
+        export const BODY = 'body';
     }
 }
 
