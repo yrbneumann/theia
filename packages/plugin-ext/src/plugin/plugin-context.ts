@@ -362,6 +362,10 @@ export function createAPIFactory(
                     });
                 }
             },
+            registerUriHandler(handler: theia.UriHandler): theia.Disposable {
+                // TODO Apply full implementation https://github.com/theia-ide/theia/issues/5119
+                return new Disposable(() => {});
+            },
             registerDecorationProvider(provider: DecorationProvider): theia.Disposable {
                 return decorationsExt.registerDecorationProvider(provider);
             }
@@ -654,6 +658,14 @@ export function createAPIFactory(
 
             onDidEndTask(listener, thisArg?, disposables?) {
                 return tasksExt.onDidEndTask(listener, thisArg, disposables);
+            },
+
+            onDidStartTaskProcess(listener, thisArg?, disposables?) {
+                return tasksExt.onDidStartTaskProcess(listener, thisArg, disposables);
+            },
+
+            onDidEndTaskProcess(listener, thisArg?, disposables?) {
+                return tasksExt.onDidEndTaskProcess(listener, thisArg, disposables);
             }
         };
 

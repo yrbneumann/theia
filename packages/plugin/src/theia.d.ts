@@ -2941,6 +2941,21 @@ declare module '@theia/plugin' {
     }
 
     /**
+     * A uri handler is responsible for handling system-wide [uris](#Uri).
+     *
+     * @see [window.registerUriHandler](#window.registerUriHandler).
+     */
+    export interface UriHandler {
+
+        /**
+         * Handle the provided system-wide [uri](#Uri).
+         *
+         * @see [window.registerUriHandler](#window.registerUriHandler).
+         */
+        handleUri(uri: Uri): ProviderResult<void>;
+    }
+
+    /**
      * Common namespace for dealing with window and editor, showing messages and user input.
      */
     export namespace window {
@@ -3371,6 +3386,29 @@ declare module '@theia/plugin' {
          * @returns a [TreeView](#TreeView).
          */
         export function createTreeView<T>(viewId: string, options: TreeViewOptions<T>): TreeView<T>;
+
+        /**
+         * Registers a [uri handler](#UriHandler) capable of handling system-wide [uris](#Uri).
+         * In case there are multiple windows open, the topmost window will handle the uri.
+         * A uri handler is scoped to the extension it is contributed from; it will only
+         * be able to handle uris which are directed to the extension itself. A uri must respect
+         * the following rules:
+         *
+         * - The uri-scheme must be the product name;
+         * - The uri-authority must be the extension id (eg. `my.extension`);
+         * - The uri-path, -query and -fragment parts are arbitrary.
+         *
+         * For example, if the `my.extension` extension registers a uri handler, it will only
+         * be allowed to handle uris with the prefix `product-name://my.extension`.
+         *
+         * An extension can only register a single uri handler in its entire activation lifetime.
+         *
+         * * *Note:* There is an activation event `onUri` that fires when a uri directed for
+         * the current extension is about to be handled.
+         *
+         * @param handler The uri handler to register for this extension.
+         */
+        export function registerUriHandler(handler: UriHandler): Disposable;
 
         /**
          * Show progress in the editor. Progress is shown while running the given callback
@@ -7760,6 +7798,39 @@ declare module '@theia/plugin' {
         execution: TaskExecution;
     }
 
+    /**
+     * An event signaling the start of a process execution
+     * triggered through a task
+     */
+    export interface TaskProcessStartEvent {
+        /**
+         * The task execution for which the process got started.
+         */
+        execution: TaskExecution;
+
+        /**
+         * The underlying process id.
+         */
+        processId: number;
+    }
+
+    /**
+     * An event signaling the end of a process execution
+     * triggered through a task
+     */
+    export interface TaskProcessEndEvent {
+
+        /**
+         * The task execution for which the process got started.
+         */
+        execution: TaskExecution;
+
+        /**
+         * The process's exit code.
+         */
+        exitCode: number;
+    }
+
     export namespace tasks {
 
         /**
@@ -7781,6 +7852,20 @@ declare module '@theia/plugin' {
 
         /** Fires when a task ends. */
         export const onDidEndTask: Event<TaskEndEvent>;
+
+        /**
+         * Fires when the underlying process has been started.
+         * This event will not fire for tasks that don't
+         * execute an underlying process.
+         */
+        export const onDidStartTaskProcess: Event<TaskProcessStartEvent>;
+
+        /**
+         * Fires when the underlying process has ended.
+         * This event will not fire for tasks that don't
+         * execute an underlying process.
+         */
+        export const onDidEndTaskProcess: Event<TaskProcessEndEvent>;
     }
 
     /**
@@ -7790,11 +7875,11 @@ declare module '@theia/plugin' {
     export interface Memento {
 
         /**
-        * Return a value.
-        *
-        * @param key A string.
-        * @return The stored value or `undefined`.
-        */
+         * Return a value.
+         *
+         * @param key A string.
+         * @return The stored value or `undefined`.
+         */
         get<T>(key: string): T | undefined;
 
         /**
