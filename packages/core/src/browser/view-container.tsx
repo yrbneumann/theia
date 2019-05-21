@@ -16,14 +16,15 @@
 
 import { interfaces } from 'inversify';
 import * as React from 'react';
-import { SortablePane, Pane } from 'react-sortable-pane';
+import { ReflexContainer, ReflexSplitter, ReflexElement, ReflexElementProps } from 'react-reflex';
+import 'react-reflex/styles.css';
 import { ReactWidget, Widget, EXPANSION_TOGGLE_CLASS, COLLAPSED_CLASS, MessageLoop, Message } from './widgets';
 import { Disposable } from '../common/disposable';
 import { ContextMenuRenderer } from './context-menu-renderer';
 import { ApplicationShell } from './shell/application-shell';
 import { MaybePromise } from '../common/types';
 
-const backgroundColor = () => '#' + (0x1000000 + (Math.random()) * 0xffffff).toString(16).substr(1, 6);
+// const backgroundColor = () => '#' + (0x1000000 + (Math.random()) * 0xffffff).toString(16).substr(1, 6);
 
 export class ViewContainer extends ReactWidget implements ApplicationShell.TrackableWidgetProvider {
 
@@ -39,7 +40,7 @@ export class ViewContainer extends ReactWidget implements ApplicationShell.Track
     }
 
     public render() {
-        return <ViewContainerComponent widgets={this.props.map(p => p.widget)} services={this.services} />;
+        return <ViewContainerComponent widgets={this.props.map(prop => prop.widget)} services={this.services} />;
     }
 
     addWidget(prop: ViewContainer.Prop): Disposable {
@@ -137,45 +138,34 @@ export class ViewContainerComponent extends React.Component<ViewContainerCompone
 
     constructor(props: Readonly<ViewContainerComponent.Props>) {
         super(props);
-        const { widgets } = props;
+        const widgets: Array<{ widget: Widget } & ReflexElementProps> = [];
+        for (let i = 0; i < props.widgets.length; i++) {
+            const widget = props.widgets[i];
+            widgets.push({
+                widget,
+                direction: i === 0 ? 1 : i === props.widgets.length - 1 ? -1 : [1, -1],
+                minSize: 30
+            });
+        }
         this.state = {
-            widgets: widgets.map(widget => ({ widget, visible: true, expanded: true }))
+            widgets
         };
     }
 
-    protected onExpandedChange = (widget: Widget, expanded: boolean) => {
-        const { widgets } = this.state;
-        const index = widgets.findIndex(w => widget === w.widget);
-        if (index !== -1) {
-            widgets[index].expanded = expanded;
-        }
-        this.setState({
-            widgets
-        });
-    }
     public render() {
-        const panes = this.state.widgets.filter(widget => widget.visible).map(widget => (
-            <Pane
-                key={widget.widget.id}
-                defaultSize={{ width: '100%' }}
-                style={{ backgroundColor: backgroundColor() }}
-                resizable={{ x: false, y: true }}
-            >
-                <ViewContainerPart key={widget.widget.id} widget={widget.widget} onExpandedChange={this.onExpandedChange} />
-            </Pane>
-        ));
-        return (
-            <div>
-                <SortablePane
-                    direction='vertical'
-                    margin={0}
-                    defaultOrder={this.state.widgets.map(({ widget }) => widget.id)}
-                    disableEffect={true}
-                >
-                    {panes}
-                </SortablePane>
-            </div>
-        );
+        const nodes: React.ReactNode[] = [];
+        for (const { widget } of this.state.widgets) {
+            const { id } = widget;
+            if (nodes.length !== 0) {
+                nodes.push(<ReflexSplitter className={'splitter'} key={`splitter-${id}`} propagate={true} />);
+            }
+            nodes.push(<ViewContainerPart key={id} widget={widget} {...widget} />);
+        }
+        return <div className='foo-bar-baz'>
+            <ReflexContainer orientation='horizontal'>
+                {nodes}
+            </ReflexContainer>
+        </div>;
     }
 
 }
@@ -186,11 +176,7 @@ export namespace ViewContainerComponent {
     }
 
     export interface State {
-        widgets: Array<{
-            widget: Widget
-            expanded: boolean
-            visible: boolean
-        }>;
+        widgets: Array<{ widget: Widget } & ReflexElementProps>
     }
 }
 
@@ -199,7 +185,8 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
     constructor(props: ViewContainerPart.Props) {
         super(props);
         this.state = {
-            expanded: true
+            expanded: true,
+            size: -1
         };
     }
 
@@ -219,17 +206,19 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
             toggleClassNames.push(COLLAPSED_CLASS);
         }
         const toggleClassName = toggleClassNames.join(' ');
-        return <div className={ViewContainerPart.Styles.VIEW_CONTAINER_PART_CLASS}>
-            <div className={`theia-header ${ViewContainerPart.Styles.HEAD}`}
-                title={widget.title.caption}
-                onClick={this.toggle}
-                onContextMenu={this.handleContextMenu}>
-                <span className={toggleClassName} />
-                <span className={`${ViewContainerPart.Styles.LABEL} noselect`}>{widget.title.label}</span>
-                {this.state.expanded && this.renderToolbar()}
+        return <ReflexElement size={this.state.size} {...this.props} minSize={22}>
+            <div className={`pane-content ${ViewContainerPart.Styles.VIEW_CONTAINER_PART_CLASS}`}>
+                <div className={`theia-header ${ViewContainerPart.Styles.HEAD}`}
+                    title={widget.title.caption}
+                    onClick={this.toggle}
+                    onContextMenu={this.handleContextMenu}>
+                    <span className={toggleClassName} />
+                    <span className={`${ViewContainerPart.Styles.LABEL} noselect`}>{widget.title.label}</span>
+                    {this.state.expanded && this.renderToolbar()}
+                </div>
+                {this.state.expanded && <div className={ViewContainerPart.Styles.BODY} ref={this.setRef} /*style={{ backgroundColor: backgroundColor() }}*/ />}
             </div>
-            {this.state.expanded && <div className={ViewContainerPart.Styles.BODY} ref={this.setRef} style={{ backgroundColor: backgroundColor() }} />}
-        </div>;
+        </ReflexElement>;
     }
 
     protected renderToolbar(): React.ReactNode {
@@ -274,10 +263,13 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
         if (this.state.expanded) {
             Widget.detach(this.props.widget);
         }
+        const expanded = !this.state.expanded;
         this.setState({
-            expanded: !this.state.expanded
+            expanded
         });
-        this.props.onExpandedChange(this.props.widget, this.state.expanded);
+        if (this.props.onExpandedChange) {
+            this.props.onExpandedChange(this.props.widget, expanded);
+        }
     }
 
     protected ref: HTMLElement | undefined;
@@ -296,13 +288,15 @@ export class ViewContainerPart extends React.Component<ViewContainerPart.Props, 
     }
 
 }
+
 export namespace ViewContainerPart {
-    export interface Props {
-        readonly widget: Widget
-        onExpandedChange(widget: Widget, expanded: boolean): void;
+    export interface Props extends ReflexElementProps {
+        readonly widget: Widget;
+        onExpandedChange?(widget: Widget, expanded: boolean): void;
     }
     export interface State {
-        expanded: boolean
+        expanded: boolean;
+        size: -1;
     }
     export namespace Styles {
         export const VIEW_CONTAINER_PART_CLASS = 'theia-view-container-part';

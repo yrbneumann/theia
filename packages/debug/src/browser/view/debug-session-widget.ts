@@ -69,11 +69,31 @@ export class DebugSessionWidget extends BaseWidget implements ApplicationShell.T
 
         this.container.addClass('theia-debug-widget-container');
         this.viewContainer = this.viewContainerFactory(...[
-            DebugThreadsWidget,
-            DebugStackFramesWidget,
-            DebugVariablesWidget,
-            DebugBreakpointsWidget].map(identifier => ({ widget: identifier, options: { weight: 10 } }))
-        );
+            {
+                widget: DebugThreadsWidget,
+                options: {
+                    weight: 30
+                }
+            },
+            {
+                widget: DebugStackFramesWidget,
+                options: {
+                    weight: 20
+                }
+            },
+            {
+                widget: DebugVariablesWidget,
+                options: {
+                    weight: 10
+                }
+            },
+            {
+                widget: DebugBreakpointsWidget,
+                options: {
+                    weight: 10
+                }
+            }]);
+
         this.container.addWidget(this.viewContainer);
 
         this.toDispose.pushAll([

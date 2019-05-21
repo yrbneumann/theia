@@ -19,15 +19,37 @@
     display: flex;
     flex-direction: column;
 }
-.theia-view-container .sortable {
-    display: flex;
-    flex-direction: column;
+
+.theia-view-container .foo-bar-baz {
+    height: 500px;
 }
 
-.theia-view-container-part {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
+.theia-view-container .reflex-container > .reflex-splitter.active,
+.theia-view-container .reflex-container > .reflex-splitter:hover {
+  background-color: var(--theia-border-color1);
+  transition: all 1s ease;
+}
+
+.theia-view-container .reflex-container > .reflex-splitter {
+    background-color: var(--theia-layout-color0);
+}
+
+.theia-view-container .horizontal > .reflex-splitter {
+    border: none;
+    height: 1px;
+}
+
+.theia-view-container .reflex-container.horizontal > .reflex-splitter:hover,
+.theia-view-container .reflex-container.horizontal > .reflex-splitter.active {
+  border-bottom: none;
+  border-top: none;
+}
+
+.theia-view-container .pane-content {
+    text-align: center;
+    position: relative;
+    user-select: none;
+    height: 100%;
 }
 
 .theia-view-container-part .head {
@@ -58,6 +80,6 @@
 }
 
 .theia-view-container-part .body {
-    height: 100%;
-    display: block;
+    /* height: 100%;
+    display: block; */
 }
